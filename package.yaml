@@ -29,6 +29,10 @@ library:
   - -fwarn-tabs
   dependencies:
   - yesod
+  - text
+  - persistent
+  - persistent-sqlite
+  - aeson
 
 executables:
   flashcards-exe:
@@ -41,6 +45,10 @@ executables:
     dependencies:
     - flashcards
     - yesod
+    - persistent
+    - persistent-sqlite
+    - monad-logger
+    - resourcet
 
 tests:
   flashcards-test:

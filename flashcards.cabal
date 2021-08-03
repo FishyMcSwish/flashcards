@@ -32,7 +32,11 @@ library
       src
   ghc-options: -Wall -fwarn-tabs
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , persistent
+    , persistent-sqlite
+    , text
     , yesod
   default-language: Haskell2010
 
@@ -46,6 +50,10 @@ executable flashcards-exe
   build-depends:
       base >=4.7 && <5
     , flashcards
+    , monad-logger
+    , persistent
+    , persistent-sqlite
+    , resourcet
     , yesod
   default-language: Haskell2010
 
