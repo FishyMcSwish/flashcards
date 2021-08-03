@@ -20,6 +20,7 @@ module Lib where
 import Yesod
 import Database.Persist.Sqlite
 import Data.Text
+import Data.Aeson.Types
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"][persistLowerCase|
 Card
@@ -45,17 +46,34 @@ getFlashCardR :: CardId -> HandlerFor FlashCards Value
 getFlashCardR cardId = do
   $logDebug "FlashCardR GET"
   card <- runDB $ get404 cardId
-  returnJson $ card
+  returnJson card
 
 postFlashCardCreateR :: HandlerFor FlashCards Value
 postFlashCardCreateR  = do
   $logDebug "FlashCardR POST"
-  (cardReq :: Card) <- requireCheckJsonBody
-  cardId <- runDB $ insert $ cardReq
-  card <- runDB $ get404 cardId
-  returnJson $ card
+  (cardResult :: Result Card) <- parseCheckJsonBody
+  case validateCardReq cardResult of
+    Success cardReq -> do
+      cardId <- runDB $ insert cardReq
+      card <- runDB $ get404 cardId
+      returnJson card
+    Error msg -> 
+      returnJson $ InvalidRequestError msg
+    
 
+validateCardReq :: Result Card -> Result Card
+validateCardReq cardReq = 
+  cardReq >>= 
+  questionNotEmpty >>= 
+  answerNotEmpty
 
+questionNotEmpty :: Card -> Result Card
+questionNotEmpty card = 
+  if (empty ==) $ cardQuestion card then Error "question is empty" else Success card
+
+answerNotEmpty :: Card -> Result Card
+answerNotEmpty card = 
+  if (empty ==) $ cardAnswer card then Error "answer is empty" else Success card
 
 instance YesodPersist FlashCards where
   type YesodPersistBackend FlashCards = SqlBackend
@@ -63,6 +81,12 @@ instance YesodPersist FlashCards where
   runDB action = do 
     FlashCards pool <- getYesod
     runSqlPool action pool
+
+data AppError = 
+  InvalidRequestError String
+
+instance ToJSON AppError where
+  toJSON (InvalidRequestError msg) = object ["error" .= ("Invalid Request" :: String) , "message" .= msg]  
 
 instance ToJSON Card where
   toJSON Card {..} = object
