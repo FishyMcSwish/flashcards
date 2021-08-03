@@ -13,6 +13,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Lib where
 
@@ -29,7 +30,8 @@ Card
 |]
 
 mkYesod "FlashCards" [parseRoutes|
-/flashcard/#CardId FlashCardR GET POST
+/flashcard/#CardId FlashCardR GET
+/flashcard FlashCardCreateR POST
 |]
 
 
@@ -45,11 +47,11 @@ getFlashCardR cardId = do
   card <- runDB $ get404 cardId
   returnJson $ card
 
-postFlashCardR :: CardId -> HandlerFor FlashCards Value
-postFlashCardR cardId = do
+postFlashCardCreateR :: HandlerFor FlashCards Value
+postFlashCardCreateR  = do
   $logDebug "FlashCardR POST"
-  $logDebug (pack $ show cardId)
-  runDB $ insert_ $ Card (pack $ "q" ++ show cardId) ( pack $ "a" ++ show cardId)
+  (cardReq :: Card) <- requireCheckJsonBody
+  cardId <- runDB $ insert $ cardReq
   card <- runDB $ get404 cardId
   returnJson $ card
 
@@ -67,3 +69,7 @@ instance ToJSON Card where
     ["question" .= cardQuestion
     , "answer" .= cardAnswer
     ]
+
+instance FromJSON Card where
+  parseJSON (Object v) = Card <$> v.: "question" <*> v.: "answer"
+  parseJSON _ = undefined
